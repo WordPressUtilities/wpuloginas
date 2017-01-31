@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Login As
 Description: Login as another user
-Version: 0.3.1
+Version: 0.4
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -37,6 +37,14 @@ class WPULoginAs {
         add_filter('user_row_actions', array(&$this,
             'user_action_link'
         ), 10, 2);
+
+        /* Add to multisite only if plugin is active on all websites */
+        $active_plugins = (array) get_site_option('active_sitewide_plugins', array());
+        if (array_key_exists(plugin_basename(__FILE__), $active_plugins)) {
+            add_filter('ms_user_row_actions', array(&$this,
+                'user_action_link'
+            ), 10, 2);
+        }
     }
 
     /* ----------------------------------------------------------
@@ -72,7 +80,29 @@ class WPULoginAs {
             $_SESSION['wpuloginas_originaluser'] = get_current_user_id();
         }
 
-        $actions['wpu_login_as'] = '<a href="' . $this->get_redirect_url($user_obj->ID) . '">' . $this->get_loginas_txt($user_obj->ID) . '</a>';
+        /* Multisite view */
+        if (current_filter() == 'ms_user_row_actions') {
+
+            $redirect_url = $this->get_redirect_url($user_obj->ID);
+
+            /* If user is not an admin, redirect to its first blog */
+            if (!in_array('administrator', $user_obj->roles)) {
+                $blogs = get_blogs_of_user($user_obj->ID);
+                if (!is_array($blogs) || empty($blogs)) {
+                    return;
+                }
+                $blog_id = false;
+                foreach ($blogs as $blog_id_tmp => $blog) {
+                    $blog_id = $blog_id_tmp;
+                    break;
+                }
+                $redirect_url = $this->get_redirect_url($user_obj->ID, $blog_id_tmp) . '&wpuloginas_originaluser=' . get_current_user_id();
+            }
+
+            $actions['wpu_login_as'] = '<a href="' . $redirect_url . '">' . $this->get_loginas_txt($user_obj->ID) . '</a>';
+        } else {
+            $actions['wpu_login_as'] = '<a href="' . $this->get_redirect_url($user_obj->ID) . '">' . $this->get_loginas_txt($user_obj->ID) . '</a>';
+        }
 
         return $actions;
     }
@@ -103,13 +133,9 @@ class WPULoginAs {
     ---------------------------------------------------------- */
 
     public function redirecttouser() {
+
         /* Only for loggedin user in admin */
         if (!is_admin() || !is_user_logged_in()) {
-            return false;
-        }
-
-        /* Not going back and not admin */
-        if (!isset($_SESSION['wpuloginas_originaluser']) && !current_user_can('remove_users')) {
             return false;
         }
 
@@ -123,6 +149,15 @@ class WPULoginAs {
             return false;
         }
 
+        /* Save original user if it exists */
+        if (!isset($_SESSION['wpuloginas_originaluser']) && isset($_GET['wpuloginas_originaluser']) && $_GET['wpuloginas_originaluser'] == get_current_user_id()) {
+            $_SESSION['wpuloginas_originaluser'] = $_GET['wpuloginas_originaluser'];
+        }
+
+        /* Not going back and not admin */
+        if (!isset($_SESSION['wpuloginas_originaluser']) && !current_user_can('remove_users')) {
+            return false;
+        }
         $this->setuser($_GET['loginas']);
 
     }
@@ -160,8 +195,8 @@ class WPULoginAs {
      * @param  int $user_id
      * @return string
      */
-    public function get_redirect_url($user_id) {
-        return wp_nonce_url(admin_url('index.php?loginas=' . $user_id), 'redirecttouser', 'wpuloginas');
+    public function get_redirect_url($user_id, $blog_id = null) {
+        return wp_nonce_url(get_admin_url($blog_id, 'index.php?loginas=' . $user_id), 'redirecttouser', 'wpuloginas');
     }
 
     /**
