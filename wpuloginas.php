@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Login As
 Description: Login as another user
-Version: 0.4
+Version: 0.5
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -34,6 +34,9 @@ class WPULoginAs {
         add_action('admin_bar_menu', array(&$this,
             'go_back_link'
         ), 999);
+        add_action('wp_footer', array(&$this,
+            'go_back_link_footer'
+        ), 999);
         add_filter('user_row_actions', array(&$this,
             'user_action_link'
         ), 10, 2);
@@ -50,6 +53,20 @@ class WPULoginAs {
     /* ----------------------------------------------------------
       Admin buttons
     ---------------------------------------------------------- */
+
+    /**
+     * Display backlink in footer
+     */
+    public function go_back_link_footer() {
+        if (!isset($_SESSION['wpuloginas_originaluser'])) {
+            return;
+        }
+        $user_id = $_SESSION['wpuloginas_originaluser'];
+        if ($user_id == get_current_user_id()) {
+            return;
+        }
+        echo '<footer id="wpuloginas-footer" style="padding:0.5em 1em;text-align: center;"><a href="' . $this->get_redirect_url($user_id) . '">' . $this->get_loginas_txt($user_id, true) . '</a></footer>';
+    }
 
     /**
      * Display backlink in admin bar

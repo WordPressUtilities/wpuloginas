@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: WPU Login As\n"
-"POT-Creation-Date: 2017-01-31 22:22+0100\n"
+"POT-Creation-Date: 2017-02-22 20:56+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Darklg <darklg.blog@gmail.com>\n"
 "Language-Team: \n"
@@ -15,12 +15,12 @@ msgstr ""
 "X-Poedit-KeywordsList: __;_e\n"
 "X-Poedit-SearchPath-0: ../.\n"
 
-#: .././wpuloginas.php:209
+#: .././wpuloginas.php:226
 #, php-format
 msgid "Login as \"%s\""
 msgstr "Connexion en tant que \"%s\""
 
-#: .././wpuloginas.php:211
+#: .././wpuloginas.php:228
 #, php-format
 msgid "Back to user \"%s\""
 msgstr "Retour à l'utilisateur \"%s\""
