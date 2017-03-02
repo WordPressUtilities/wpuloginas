@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Login As
 Description: Login as another user
-Version: 0.5
+Version: 0.5.1
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -162,7 +162,7 @@ class WPULoginAs {
         }
 
         /* Check nonce */
-        if (!isset($_GET['wpuloginas']) || !wp_verify_nonce($_GET['wpuloginas'], 'redirecttouser')) {
+        if (!isset($_GET['wpuloginas']) || !wp_verify_nonce($_GET['wpuloginas'], 'redirecttouser' . $_GET['loginas'])) {
             return false;
         }
 
@@ -213,7 +213,7 @@ class WPULoginAs {
      * @return string
      */
     public function get_redirect_url($user_id, $blog_id = null) {
-        return wp_nonce_url(get_admin_url($blog_id, 'index.php?loginas=' . $user_id), 'redirecttouser', 'wpuloginas');
+        return wp_nonce_url(get_admin_url($blog_id, 'index.php?loginas=' . $user_id), 'redirecttouser' . $user_id, 'wpuloginas');
     }
 
     /**
