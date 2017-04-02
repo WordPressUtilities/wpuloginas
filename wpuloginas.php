@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Login As
 Description: Login as another user
-Version: 0.5.1
+Version: 0.5.2
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -11,6 +11,9 @@ License URI: http://opensource.org/licenses/MIT
 */
 
 class WPULoginAs {
+
+    private $prevent_clean_logout = false;
+
     public function __construct() {
         add_action('wp_loaded', array(&$this,
             'launch_plugin'
@@ -36,6 +39,9 @@ class WPULoginAs {
         ), 999);
         add_action('wp_footer', array(&$this,
             'go_back_link_footer'
+        ), 999);
+        add_action('wp_logout', array(&$this,
+            'wp_logout'
         ), 999);
         add_filter('user_row_actions', array(&$this,
             'user_action_link'
@@ -190,6 +196,7 @@ class WPULoginAs {
         }
 
         /* Logout */
+        $this->prevent_clean_logout = true;
         wp_logout();
 
         /* Login as user */
@@ -201,6 +208,13 @@ class WPULoginAs {
         wp_redirect('/wp-admin/');
 
         die;
+    }
+
+    public function wp_logout() {
+        if ($this->prevent_clean_logout) {
+            return;
+        }
+        unset($_SESSION['wpuloginas_originaluser']);
     }
 
     /* ----------------------------------------------------------
