@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Login As
 Description: Login as another user
-Version: 0.5.2
+Version: 0.6.0
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -13,6 +13,8 @@ License URI: http://opensource.org/licenses/MIT
 class WPULoginAs {
 
     private $prevent_clean_logout = false;
+    private $cookie_name = 'wpuloginas_originaluserid';
+    private $cookie_name_hash = 'wpuloginas_originaluserhash';
 
     public function __construct() {
         add_action('wp_loaded', array(&$this,
@@ -64,11 +66,8 @@ class WPULoginAs {
      * Display backlink in footer
      */
     public function go_back_link_footer() {
-        if (!isset($_SESSION['wpuloginas_originaluser'])) {
-            return;
-        }
-        $user_id = $_SESSION['wpuloginas_originaluser'];
-        if ($user_id == get_current_user_id()) {
+        $user_id = $this->get_user_id_from_cookie();
+        if (!is_numeric($user_id)) {
             return;
         }
         echo '<footer id="wpuloginas-footer" style="padding:0.5em 1em;text-align: center;"><a href="' . $this->get_redirect_url($user_id) . '">' . $this->get_loginas_txt($user_id, true) . '</a></footer>';
@@ -78,11 +77,8 @@ class WPULoginAs {
      * Display backlink in admin bar
      */
     public function go_back_link($wp_admin_bar) {
-        if (!isset($_SESSION['wpuloginas_originaluser'])) {
-            return;
-        }
-        $user_id = $_SESSION['wpuloginas_originaluser'];
-        if ($user_id == get_current_user_id()) {
+        $user_id = $this->get_user_id_from_cookie();
+        if (!is_numeric($user_id)) {
             return;
         }
         $wp_admin_bar->add_node(array(
@@ -98,10 +94,7 @@ class WPULoginAs {
             return $actions;
         }
 
-        /* Save the original user id (the first time we see the button) */
-        if (!isset($_SESSION['wpuloginas_originaluser'])) {
-            $_SESSION['wpuloginas_originaluser'] = get_current_user_id();
-        }
+        $this->set_user_id_in_cookie();
 
         /* Multisite view */
         if (current_filter() == 'ms_user_row_actions') {
@@ -143,10 +136,7 @@ class WPULoginAs {
             return false;
         }
 
-        /* Save the original user id (the first time we see the button) */
-        if (!isset($_SESSION['wpuloginas_originaluser'])) {
-            $_SESSION['wpuloginas_originaluser'] = get_current_user_id();
-        }
+        $this->set_user_id_in_cookie();
 
         echo '<a href="' . $this->get_redirect_url($user->ID) . '" class="button">' . $this->get_loginas_txt($user->ID) . '</a>';
     }
@@ -173,12 +163,12 @@ class WPULoginAs {
         }
 
         /* Save original user if it exists */
-        if (!isset($_SESSION['wpuloginas_originaluser']) && isset($_GET['wpuloginas_originaluser']) && $_GET['wpuloginas_originaluser'] == get_current_user_id()) {
-            $_SESSION['wpuloginas_originaluser'] = $_GET['wpuloginas_originaluser'];
+        if (isset($_GET['wpuloginas_originaluser']) && $_GET['wpuloginas_originaluser'] == get_current_user_id()) {
+            $this->set_user_id_in_cookie($_GET['wpuloginas_originaluser']);
         }
 
         /* Not going back and not admin */
-        if (!isset($_SESSION['wpuloginas_originaluser']) && !current_user_can('remove_users')) {
+        if (!$this->has_original_user_to_go_back() && !current_user_can('remove_users')) {
             return false;
         }
         $this->setuser($_GET['loginas']);
@@ -214,7 +204,64 @@ class WPULoginAs {
         if ($this->prevent_clean_logout) {
             return;
         }
-        unset($_SESSION['wpuloginas_originaluser']);
+        $this->delete_cookies();
+    }
+
+    /* ----------------------------------------------------------
+      Cookies utils
+    ---------------------------------------------------------- */
+
+    public function has_original_user_to_go_back() {
+        return isset($_COOKIE[$this->cookie_name]) && $_COOKIE[$this->cookie_name] != get_current_user_id();
+    }
+
+    public function get_user_id_from_cookie() {
+        /* Check if values exists */
+        if (!isset($_COOKIE[$this->cookie_name]) || !isset($_COOKIE[$this->cookie_name_hash])) {
+            return false;
+        }
+        /* Check if user is not current user */
+        $user_id = $_COOKIE[$this->cookie_name];
+        if ($user_id == get_current_user_id()) {
+            return false;
+        }
+        /* Check if hash is correct */
+        if ($this->get_user_hash($user_id) != $_COOKIE[$this->cookie_name_hash]) {
+            return false;
+        }
+
+        return $user_id;
+    }
+
+    public function set_user_id_in_cookie($new_user_id = false) {
+        /* Save the original user id (the first time we see the button) */
+        if (1 || !isset($_COOKIE[$this->cookie_name])) {
+            if (!is_numeric($new_user_id)) {
+                $new_user_id = get_current_user_id();
+            }
+
+            $expire_time = current_time('timestamp') + 3600;
+            setcookie($this->cookie_name, $new_user_id, $expire_time, '/');
+            setcookie($this->cookie_name_hash, $this->get_user_hash($new_user_id), $expire_time, '/');
+        }
+    }
+
+    public function delete_cookies() {
+        $expire_time = current_time('timestamp') - 86400;
+        setcookie($this->cookie_name, '', $expire_time);
+        setcookie($this->cookie_name_hash, '', $expire_time);
+    }
+
+    public function get_user_hash($user_id) {
+        $cache_key = 'wpuloginas_userhash' . $user_id;
+        $user_hash = wp_cache_get($cache_key);
+        if ($user_hash === false) {
+            /* Generate hash from fixed but non public user datas */
+            $user = get_user_by('id', $user_id);
+            $user_hash = md5($user->user_pass . $user->user_registered . $user->user_login . $user_id);
+            wp_cache_set($cache_key, $user_hash, '', 600);
+        }
+        return $user_hash;
     }
 
     /* ----------------------------------------------------------
