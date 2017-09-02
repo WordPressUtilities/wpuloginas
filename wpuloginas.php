@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Login As
 Description: Login as another user
-Version: 0.6.0
+Version: 0.7.0
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -12,9 +12,13 @@ License URI: http://opensource.org/licenses/MIT
 
 class WPULoginAs {
 
+    /* Toggles */
     private $prevent_clean_logout = false;
+
+    /* Initial settings */
     private $cookie_name = 'wpuloginas_originaluserid';
     private $cookie_name_hash = 'wpuloginas_originaluserhash';
+    private $min_user_level = 'remove_users';
 
     public function __construct() {
         add_action('wp_loaded', array(&$this,
@@ -26,6 +30,11 @@ class WPULoginAs {
         if (!is_user_logged_in()) {
             return;
         }
+
+        $this->cookie_name = apply_filters_('wpuloginas__cookie_name', $this->cookie_name);
+        $this->cookie_name_hash = apply_filters_('wpuloginas__cookie_name_hash', $this->cookie_name_hash);
+        $this->min_user_level = apply_filters_('wpuloginas__min_user_level', $this->min_user_level);
+
         load_plugin_textdomain('wpuloginas', false, dirname(plugin_basename(__FILE__)) . '/lang/');
         add_action('wp_loaded', array(&$this,
             'redirecttouser'
@@ -90,7 +99,7 @@ class WPULoginAs {
 
     public function user_action_link($actions, $user_obj) {
         /* Only for admins */
-        if (!current_user_can('remove_users') || $user_obj->ID == get_current_user_id()) {
+        if (!current_user_can($this->min_user_level) || $user_obj->ID == get_current_user_id()) {
             return $actions;
         }
 
@@ -132,7 +141,7 @@ class WPULoginAs {
      */
     public function displaybutton($user) {
         /* Only for admins */
-        if (!current_user_can('remove_users') || $user->ID == get_current_user_id()) {
+        if (!current_user_can($this->min_user_level) || $user->ID == get_current_user_id()) {
             return false;
         }
 
@@ -168,7 +177,7 @@ class WPULoginAs {
         }
 
         /* Not going back and not admin */
-        if (!$this->has_original_user_to_go_back() && !current_user_can('remove_users')) {
+        if (!$this->has_original_user_to_go_back() && !current_user_can($this->min_user_level)) {
             return false;
         }
         $this->setuser($_GET['loginas']);
@@ -235,7 +244,7 @@ class WPULoginAs {
 
     public function set_user_id_in_cookie($new_user_id = false) {
         /* Save the original user id (the first time we see the button) */
-        if (1 || !isset($_COOKIE[$this->cookie_name])) {
+        if (!isset($_COOKIE[$this->cookie_name])) {
             if (!is_numeric($new_user_id)) {
                 $new_user_id = get_current_user_id();
             }
