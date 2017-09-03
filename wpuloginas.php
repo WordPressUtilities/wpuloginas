@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Login As
 Description: Login as another user
-Version: 0.7.0
+Version: 0.7.1
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -31,9 +31,9 @@ class WPULoginAs {
             return;
         }
 
-        $this->cookie_name = apply_filters_('wpuloginas__cookie_name', $this->cookie_name);
-        $this->cookie_name_hash = apply_filters_('wpuloginas__cookie_name_hash', $this->cookie_name_hash);
-        $this->min_user_level = apply_filters_('wpuloginas__min_user_level', $this->min_user_level);
+        $this->cookie_name = apply_filters('wpuloginas__cookie_name', $this->cookie_name);
+        $this->cookie_name_hash = apply_filters('wpuloginas__cookie_name_hash', $this->cookie_name_hash);
+        $this->min_user_level = apply_filters('wpuloginas__min_user_level', $this->min_user_level);
 
         load_plugin_textdomain('wpuloginas', false, dirname(plugin_basename(__FILE__)) . '/lang/');
         add_action('wp_loaded', array(&$this,
