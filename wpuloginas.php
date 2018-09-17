@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Login As
 Description: Login as another user
-Version: 0.7.1
+Version: 0.7.2
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -57,6 +57,9 @@ class WPULoginAs {
         add_filter('user_row_actions', array(&$this,
             'user_action_link'
         ), 10, 2);
+        add_action('wp_loaded', array(&$this,
+            'set_initial_cookie'
+        ), 999);
 
         /* Add to multisite only if plugin is active on all websites */
         $active_plugins = (array) get_site_option('active_sitewide_plugins', array());
@@ -66,6 +69,16 @@ class WPULoginAs {
             ), 10, 2);
         }
     }
+
+    /* Set initial cookie
+    -------------------------- */
+    function set_initial_cookie(){
+        /* Load user id in cookie */
+        if (is_admin() && current_user_can($this->min_user_level)) {
+            $this->set_user_id_in_cookie();
+        }
+    }
+
 
     /* ----------------------------------------------------------
       Admin buttons
@@ -102,8 +115,6 @@ class WPULoginAs {
         if (!current_user_can($this->min_user_level) || $user_obj->ID == get_current_user_id()) {
             return $actions;
         }
-
-        $this->set_user_id_in_cookie();
 
         /* Multisite view */
         if (current_filter() == 'ms_user_row_actions') {
