@@ -2,15 +2,18 @@
 
 /*
 Plugin Name: WPU Login As
+Plugin URI: https://github.com/WordPressUtilities/wpuloginas
 Description: Login as another user
-Version: 0.7.2
+Version: 0.8.0
 Author: Darklg
-Author URI: http://darklg.me/
+Author URI: https://darklg.me/
 License: MIT License
 License URI: http://opensource.org/licenses/MIT
 */
 
 class WPULoginAs {
+
+    private $plugin_version = '0.8.0';
 
     /* Toggles */
     private $prevent_clean_logout = false;
@@ -27,6 +30,13 @@ class WPULoginAs {
     }
 
     public function launch_plugin() {
+
+        include dirname(__FILE__) . '/inc/WPUBaseUpdate/WPUBaseUpdate.php';
+        $this->settings_update = new \wpuloginas\WPUBaseUpdate(
+            'WordPressUtilities',
+            'wpuloginas',
+            $this->plugin_version);
+
         if (!is_user_logged_in()) {
             return;
         }
@@ -72,13 +82,12 @@ class WPULoginAs {
 
     /* Set initial cookie
     -------------------------- */
-    function set_initial_cookie(){
+    public function set_initial_cookie() {
         /* Load user id in cookie */
         if (is_admin() && current_user_can($this->min_user_level)) {
             $this->set_user_id_in_cookie();
         }
     }
-
 
     /* ----------------------------------------------------------
       Admin buttons
@@ -278,6 +287,9 @@ class WPULoginAs {
         if ($user_hash === false) {
             /* Generate hash from fixed but non public user datas */
             $user = get_user_by('id', $user_id);
+            if (is_wp_error($user)) {
+                return false;
+            }
             $user_hash = md5($user->user_pass . $user->user_registered . $user->user_login . $user_id);
             wp_cache_set($cache_key, $user_hash, '', 600);
         }
