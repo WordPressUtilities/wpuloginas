@@ -4,7 +4,7 @@
 Plugin Name: WPU Login As
 Plugin URI: https://github.com/WordPressUtilities/wpuloginas
 Description: Login as another user
-Version: 0.8.0
+Version: 0.8.1
 Author: Darklg
 Author URI: https://darklg.me/
 License: MIT License
@@ -13,7 +13,7 @@ License URI: http://opensource.org/licenses/MIT
 
 class WPULoginAs {
 
-    private $plugin_version = '0.8.0';
+    private $plugin_version = '0.8.1';
 
     /* Toggles */
     private $prevent_clean_logout = false;
@@ -221,7 +221,7 @@ class WPULoginAs {
         /* Login as user */
         wp_set_current_user($user_id, $user->user_login);
         wp_set_auth_cookie($user_id);
-        do_action('wp_login', $user->user_login);
+        do_action('wp_login', $user->user_login, $user);
 
         /* Redirect to admin home */
         wp_redirect('/wp-admin/');
